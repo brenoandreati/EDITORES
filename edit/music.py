@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Trilha instrumental original (96 BPM, 30 compassos = 75s), sincronizada com os atos do vídeo.
-Compassos: 0-3 intro | 4-10 bonés/menino | 11-21 REVELAÇÃO | 22-27 câmera lenta | 28-29 final
+Seções vêm do edl.py: intro | bonés/menino | REVELAÇÃO (REVEAL_BAR) | câmera lenta (DREAM_BAR) | final
 """
 import numpy as np, wave, sys
 
@@ -8,7 +8,8 @@ SR = 44100
 BPM = 96
 BEAT = 60 / BPM
 BAR = 4 * BEAT
-NBARS = 30
+from edl import EDL, REVEAL_BAR as RV, DREAM_BAR as DR
+NBARS = round(sum(e[2] for e in EDL) / (4*60/96))
 N = int(SR * NBARS * BAR) + SR * 2
 L = np.zeros(N); R = np.zeros(N)
 rng = np.random.default_rng(7)
@@ -108,10 +109,10 @@ MELODY = [[76, 79, 76, 74], [74, 71, 74, 79], [76, 72, 76, 81], [77, 76, 74, 72]
 for b in range(NBARS):
     t0 = b * BAR
     root, tri = CHORDS[b % 4]
-    intro = b < 4; build = 4 <= b <= 10; full = 11 <= b <= 21; dream = 22 <= b <= 27; outro = b >= 28
+    intro = b < 4; build = 4 <= b <= RV-1; full = RV <= b <= DR-1; dream = DR <= b <= NBARS-3; outro = b >= NBARS-2
     # piano: arpejo em colcheias
     arp = [tri[0], tri[1], tri[2], tri[1]+12, tri[2], tri[1], tri[0]+12, tri[2]]
-    if not (b == 10):
+    if not (b == RV-1):
         for k, m in enumerate(arp):
             v = 0.8 if (intro or dream or outro) else 0.65
             add(piano(m, 1.4, v), t0 + k*BEAT/2, pan=(-0.3 if k % 2 else 0.3))
@@ -125,14 +126,14 @@ for b in range(NBARS):
     if build or full:
         for k in range(4 if full else 2):
             dur = BEAT if full else 2*BEAT
-            if b == 10 and k*dur >= 3*BEAT: continue
+            if b == RV-1 and k*dur >= 3*BEAT: continue
             add(bass(root, dur*0.95), t0 + k*dur)
     if dream:
         add(bass(root, BAR), t0, gain=0.8)
     # bateria
     if build:
-        add(kick(0.8), t0); add(kick(0.7), t0 + 2*BEAT) if b != 10 else None
-        if b != 10:
+        add(kick(0.8), t0); add(kick(0.7), t0 + 2*BEAT) if b != RV-1 else None
+        if b != RV-1:
             add(clap(0.6), t0 + BEAT); add(clap(0.6), t0 + 3*BEAT)
             for k in range(8): add(hat(0.6 if k % 2 else 0.35), t0 + k*BEAT/2, pan=0.25)
         else:
@@ -143,13 +144,13 @@ for b in range(NBARS):
         add(clap(1.0), t0 + BEAT); add(clap(1.0), t0 + 3*BEAT)
         for k in range(8): add(hat(1.0 if k % 2 else 0.5), t0 + k*BEAT/2, pan=0.3)
         for k, m in enumerate(MELODY[b % 4]): add(bell(m), t0 + k*BEAT, pan=-0.2)
-        if b == 21:
+        if b == DR-1:
             add(riser(2*BEAT), t0 + 2*BEAT, gain=0.8)
     if dream:
         add(kick(0.6), t0)
         for k, m in enumerate(MELODY[b % 4][::2]): add(bell(m+12, 2.0), t0 + k*2*BEAT, gain=0.7)
-    if b in (11, 22): add(crash(), t0)
-    if b == 11: add(kick(1.3), t0)
+    if b in (RV, DR): add(crash(), t0)
+    if b == RV: add(kick(1.3), t0)
     if outro:
         add(piano(tri[0]-12, 3.0, 0.7), t0)
 

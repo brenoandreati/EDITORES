@@ -35,6 +35,9 @@ def seg_filter(i, out_d, speed, fx, prev_fx):
         f.append(f"scale=w='trunc({W}*(1+{z}*t/{D})/2)*2':h=-2:eval=frame,crop={W}:{H}")
     elif fx == "low":
         f.append(f"scale=w={int(W*1.22)//2*2}:h=-2,crop={W}:{H}:(iw-{W})/2:ih-{H}")
+    elif fx.startswith("crop:"):
+        _, z, xf, yf = fx.split(":")
+        f.append(f"scale=w={int(W*float(z))//2*2}:h=-2,crop={W}:{H}:(iw-{W})*{xf}:(ih-{H})*{yf}")
     elif fx == "punch":
         f.append(f"scale=w='trunc({W}*(1.0+0.14*exp(-t*6))/2)*2':h=-2:eval=frame,crop={W}:{H}")
     if fx == "dream":
